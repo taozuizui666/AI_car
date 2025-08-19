@@ -6,5 +6,4 @@
 
 void SD_module_init(int CS_port);
 
-
 #endif
