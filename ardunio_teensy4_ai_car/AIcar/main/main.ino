@@ -3,6 +3,7 @@
 #include <SD.h>
 #include "control.h"
 #include "BT_control.h"
+#include "control_slide.h"
 #include "SD_card.h"
 // ports
 #define Lidar_TX    7   //teensy RX2
@@ -18,7 +19,10 @@
 #define SCK_MHZ     10  // 10HZ
 #define baud        115200
 #define baud2       115200
-#define bufsize     256
+#define bufsize     56       // SD_card's buf size
+#define V_car       200       // velocity of the car
+#define Sensi       1         // sensitivity of control ; bigger than more sensitive
+
 //-------------bluetooth----------------
 // connect bluetooth to the board
 SoftwareSerial bluetooth(0,1);  // bluetooth's pin RX,TX
@@ -33,8 +37,8 @@ int     buf_index = 0;
 
 // millis time
 unsigned long start_time;
-const unsigned long runtime = 5000;
-#define method 1
+const unsigned long runtime = 5*60*1000;
+#define method 2
 
 void setup() {
   start_time = millis();
@@ -87,7 +91,8 @@ void loop() {
   if(bluetooth.available())
   {
     receive_bt = bluetooth.read();
-    bluetooth_control(receive_bt,LEFT_MOTO,RIGHT_MOTO);
+    // bluetooth_control(receive_bt,LEFT_MOTO,RIGHT_MOTO);
+    slide_control(receive_bt,V_car,LEFT_MOTO,RIGHT_MOTO,Sensi);
   }
   //-------------SD_card && lidar------------------
   #if method==1
@@ -103,16 +108,38 @@ void loop() {
       buf_index = 0;
     }
   }
+  // //---------------------------
+  // // test how many data received
+  //   analogWrite(Lidar_ctr, 0);  
+  //   while(1);
+  // //---------------------------
+  
   #elif method==2
-  f = SD.open("Database/data2.txt",FILE_WRITE);
-  if(Serial2.available()){
-    lidar_data = Serial2.read();
-    if(f){
-      f.print(lidar_data);
-      f.print(",");
-      f.close();
-    }
+  // f = SD.open("Database/data2.txt",FILE_WRITE);
+  // if(Serial2.available()){
+  //   lidar_data = Serial2.read();
+  //   if(f){
+  //     f.print(lidar_data);
+  //     f.print(",");
+  //     f.close();
+  //   }
+  // }
+  while(Serial2.available() > 0){
+      lidar_buf[buf_index++] = Serial2.read();
+      
+      if(buf_index >= bufsize){   // 缓冲区满
+        f = SD.open("Database/data2.txt", FILE_WRITE);
+        if(f){
+          for(int i=0;i<bufsize;i++){
+            f.print(lidar_buf[i]);
+            f.print(",");
+          }
+          f.close();
+        }
+        buf_index = 0; // 重置下标
+      }
   }
+
   #else
   #endif
   //millis

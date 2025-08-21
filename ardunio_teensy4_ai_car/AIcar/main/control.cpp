@@ -3,7 +3,7 @@
 void ahead(int left_moto,int right_moto)
 {
     analogWrite(left_moto, 200);
-    analogWrite(right_moto, 195);
+    analogWrite(right_moto, 200);
 }
 
 void left(int left_moto,int right_moto)
