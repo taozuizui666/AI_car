@@ -19,7 +19,7 @@
 #define SCK_MHZ     10  // 10HZ
 #define baud        115200
 #define baud2       115200
-#define bufsize     56       // SD_card's buf size
+#define bufsize     256       // SD_card's buf size
 #define V_car       200       // velocity of the car
 #define Sensi       1         // sensitivity of control ; bigger than more sensitive
 
