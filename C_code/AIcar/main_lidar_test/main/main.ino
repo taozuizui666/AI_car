@@ -1,8 +1,7 @@
 #include <SoftwareSerial.h>
 #include <SPI.h>
 #include <SD.h>
-#include "control.h"
-#include "BT_control.h"
+// #include "lidar_read.h"
 #include "control_slide.h"
 #include "SD_card.h"
 // ports
@@ -22,7 +21,8 @@
 #define bufsize     256       // SD_card's buf size
 #define V_car       200       // velocity of the car
 #define Sensi       1         // sensitivity of control ; bigger than more sensitive
-
+#define Lidar_head_num      7     //A5 5A 05 00 00 40 81 
+#define Lidar_data_bin_num  5
 //-------------bluetooth----------------
 // connect bluetooth to the board
 SoftwareSerial bluetooth(0,1);  // bluetooth's pin RX,TX
@@ -31,14 +31,15 @@ int receive_bt = 0;             // data received from bluetooth
 // attention ! File is not FILE
 File f;
 //-------------lidar_data---------------
-uint8_t lidar_data = 0;
-uint8_t lidar_buf[bufsize];
-int     buf_index = 0;
+bool Lidar_head_message;
+unsigned char   Lidar_data;
+unsigned char   Lidar_bin[Lidar_data_bin_num];
+unsigned char   Lidar_init[Lidar_head_num];
+
 
 // millis time
 unsigned long start_time;
-const unsigned long runtime = 50*60*1000;
-#define method 2
+const unsigned long runtime = 10000;
 
 void setup() {
   start_time = millis();
@@ -63,92 +64,58 @@ void setup() {
   bluetooth.begin(baud);  // bluetooth's 波特率
   //-------------SD_card------------------
   SD_module_init(CS);     // initialize the SD_module and create Folder 
-  #if method==1
-  if(!SD.exists("Database/data1.txt"))
+  if(!SD.exists("Database/data0.txt"))
   {
-    f = SD.open("Database/data1.txt",FILE_WRITE);
+    f = SD.open("Database/data0.txt",FILE_WRITE);
     if(f){
       f.close();
     }
   }
-  #elif method==2
-  if(!SD.exists("Database/data2.txt"))
-  {
-    f = SD.open("Database/data2.txt",FILE_WRITE);
-    if(f){
-      f.close();
-    }
-  } 
-  #else
-  #endif 
+
+  //------------test lidar's data--------
+    Serial.begin(baud);
+  Lidar_head_message=0;
   //-------------end of setup()-----------
 }
 
 void loop() {
   if(millis()-start_time < runtime){
-  //-------------bluetooth----------------
-  // use bluetooth to control the car
-  if(bluetooth.available())
-  {
-    receive_bt = bluetooth.read();
-    // bluetooth_control(receive_bt,LEFT_MOTO,RIGHT_MOTO);
-    slide_control(receive_bt,V_car,LEFT_MOTO,RIGHT_MOTO,Sensi);
-  }
-  //-------------SD_card && lidar------------------
-  #if method==1
-  while(Serial2.available()>0){
-    lidar_data = Serial2.read();
-    lidar_buf[buf_index++] = lidar_data;
-    if(buf_index>=bufsize){
-      f = SD.open("Database/data1.txt",FILE_WRITE);
-      if(f){
-        f.write(lidar_buf,bufsize);
-        f.close();
-      }
-      buf_index = 0;
+    //-------------bluetooth----------------
+    // use bluetooth to control the car
+    if(bluetooth.available())
+    {
+      receive_bt = bluetooth.read();
+      // bluetooth_control(receive_bt,LEFT_MOTO,RIGHT_MOTO);
+      slide_control(receive_bt,V_car,LEFT_MOTO,RIGHT_MOTO,Sensi);
+      if(receive_bt==200)// when control_signal is "stop",then stop both car and lidar
+      {Serial2.write(0xA5);
+        Serial2.write(0x25);}
     }
-  }
-  // //---------------------------
-  // // test how many data received
-  //   analogWrite(Lidar_ctr, 0);  
-  //   while(1);
-  // //---------------------------
-  
-  #elif method==2
-  // f = SD.open("Database/data2.txt",FILE_WRITE);
-  // if(Serial2.available()){
-  //   lidar_data = Serial2.read();
-  //   if(f){
-  //     f.print(lidar_data);
-  //     f.print(",");
-  //     f.close();
-  //   }
-  // }
-  while(Serial2.available() > 0){
-      lidar_buf[buf_index++] = Serial2.read();
-      
-      if(buf_index >= bufsize){   // 缓冲区满
-        f = SD.open("Database/data2.txt", FILE_WRITE);
-        if(f){
-          for(int i=0;i<bufsize;i++){
-            f.print(lidar_buf[i]);
-            f.print(",");
-          }
-          f.close();
-        }
-        buf_index = 0; // 重置下标
+    if((!Lidar_head_message)&&(Serial2.available()>=Lidar_head_num))
+    {for(int i=0;i<Lidar_head_num;i++)
+      {Serial2.read();}// release the reading buff, otherwise the message will stay in the buff
+      Lidar_head_message = 1;}
+    if(Lidar_head_message && Serial2.available()>=Lidar_data_bin_num)
+    {
+      for(int i=0;i<Lidar_data_bin_num;i++)
+      {
+        Lidar_bin[i] = Serial2.read();
       }
-  }
-
-  #else
-  #endif
-  //millis
-  }
-  else{
-    analogWrite(Lidar_ctr, 0);  
+      //----------------- not done yet----------------------
+      // finding the head of the circle
+      // if((Lidar_bin[0] & 0x01) == 1){
+        for(int i=0;i<Lidar_data_bin_num;i++)
+        {
+          Serial.print(Lidar_bin[i]);
+          Serial.print(",");
+        } 
+      // }     
+      Serial.println(" ");
+    }
+  //---------------big if---------------------  
+  }else{
+    analogWrite(Lidar_ctr,0);
     while(1);
   }
-  // delay(500);  //prevent receive too fast(can be removed)
-
   //--------------end of loop()-------------
 }
