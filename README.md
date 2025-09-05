@@ -1,5 +1,5 @@
 # AI_car
-selfdriving car based on AI model
+self-driving car based on AI model
 
 author ： TAO RAN
 
