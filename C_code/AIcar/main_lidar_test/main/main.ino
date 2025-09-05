@@ -23,6 +23,8 @@
 #define Sensi       1         // sensitivity of control ; bigger than more sensitive
 #define Lidar_head_num      7     //A5 5A 05 00 00 40 81 
 #define Lidar_data_bin_num  5
+#define num_of_round        320   // the number of data after a round
+
 //-------------bluetooth----------------
 // connect bluetooth to the board
 SoftwareSerial bluetooth(0,1);  // bluetooth's pin RX,TX
@@ -32,14 +34,16 @@ int receive_bt = 0;             // data received from bluetooth
 File f;
 //-------------lidar_data---------------
 bool Lidar_head_message;
+bool new_start;                 // a round is finished
+int  Lidar_list_index;
 unsigned char   Lidar_data;
-unsigned char   Lidar_bin[Lidar_data_bin_num];
 unsigned char   Lidar_init[Lidar_head_num];
-
+unsigned char   Lidar_5byte[Lidar_data_bin_num];
+unsigned char   Lidar_list[num_of_round*Lidar_data_bin_num];
 
 // millis time
 unsigned long start_time;
-const unsigned long runtime = 10000;
+const unsigned long runtime = 30*60*1000;
 
 void setup() {
   start_time = millis();
@@ -48,6 +52,9 @@ void setup() {
   Serial2.begin(baud2);
   // turn on the lidar to receive data
   // attention! lidar can only receive data when it is spinning
+  // Serial2.write(0xA5);
+  // Serial2.write(0x40);
+  // delay(10);  
   Serial2.write(0xA5);
   Serial2.write(0x20);  
   //-------------pin outputs---------------
@@ -73,45 +80,67 @@ void setup() {
   }
 
   //------------test lidar's data--------
-    Serial.begin(baud);
+  Serial.begin(baud);
   Lidar_head_message=0;
+  new_start = 0;
+  Lidar_list_index = 0;
   //-------------end of setup()-----------
 }
 
 void loop() {
   if(millis()-start_time < runtime){
-    //-------------bluetooth----------------
-    // use bluetooth to control the car
-    if(bluetooth.available())
+    // //-------------bluetooth----------------
+    // // use bluetooth to control the car
+    // if(bluetooth.available())
+    // {
+    //   receive_bt = bluetooth.read();
+    //   // bluetooth_control(receive_bt,LEFT_MOTO,RIGHT_MOTO);
+    //   slide_control(receive_bt,V_car,LEFT_MOTO,RIGHT_MOTO,Sensi);
+    //   if(receive_bt==200)// when control_signal is "stop",then stop both car and lidar
+    //   {Serial2.write(0xA5);
+    //     Serial2.write(0x25);}
+    // }
+    if((!Lidar_head_message)&&(Serial2.available()==Lidar_head_num))
     {
-      receive_bt = bluetooth.read();
-      // bluetooth_control(receive_bt,LEFT_MOTO,RIGHT_MOTO);
-      slide_control(receive_bt,V_car,LEFT_MOTO,RIGHT_MOTO,Sensi);
-      if(receive_bt==200)// when control_signal is "stop",then stop both car and lidar
-      {Serial2.write(0xA5);
-        Serial2.write(0x25);}
-    }
-    if((!Lidar_head_message)&&(Serial2.available()>=Lidar_head_num))
-    {for(int i=0;i<Lidar_head_num;i++)
-      {Serial2.read();}// release the reading buff, otherwise the message will stay in the buff
-      Lidar_head_message = 1;}
-    if(Lidar_head_message && Serial2.available()>=Lidar_data_bin_num)
-    {
-      for(int i=0;i<Lidar_data_bin_num;i++)
+      for(int i=0;i<Lidar_head_num;i++)
       {
-        Lidar_bin[i] = Serial2.read();
-      }
-      //----------------- not done yet----------------------
-      // finding the head of the circle
-      // if((Lidar_bin[0] & 0x01) == 1){
+        Lidar_data = Serial2.read();
+        Serial.write(Lidar_data);
+      }// release the reading buff, otherwise the message will stay in the buff
+      Lidar_head_message = 1;
+    }
+    //--------------------------------------------------------
+    //--------------------------------------------------------
+    // write data for a hole circle(each angle has 5byte data)
+    while(new_start != 1)
+    {
+      if(Lidar_head_message && Serial2.available()>=Lidar_data_bin_num)
+      {
+        for(int i=0;i<Lidar_data_bin_num;i++,Lidar_list_index++)
+        {
+          Lidar_5byte[i] = Serial2.read();
+          Lidar_list[Lidar_list_index] = Lidar_5byte[i];
+        }
+        if((Lidar_5byte[0] & 0x01) == 1)
+        {
+          new_start = 1;
+        }
         for(int i=0;i<Lidar_data_bin_num;i++)
         {
-          Serial.print(Lidar_bin[i]);
-          Serial.print(",");
+            // Serial.write(Lidar_5byte[i]);
+            // Serial.print(",");
         } 
-      // }     
-      Serial.println(" ");
+        // Serial.println(" ");
+      }
     }
+    for(int i=0;i<Lidar_list_index;i++)
+    {
+      Serial.write(Lidar_list[i]);
+    }
+    Lidar_list_index = 0;
+    //--------------------------------------------------------
+    //--------------------------------------------------------
+
   //---------------big if---------------------  
   }else{
     analogWrite(Lidar_ctr,0);
