@@ -2,7 +2,6 @@
 #include <SPI.h>
 #include <SD.h>
 #include "control_slide.h"
-#include "SD_card.h"
 // ports
 #define Lidar_TX    7   //teensy RX2
 #define Lidar_RX    8   //teensy TX2
@@ -42,9 +41,6 @@ unsigned char   Lidar_init[Lidar_head_num];
 unsigned char   Lidar_5byte[Lidar_data_bin_num];
 unsigned char   Lidar_list[num_of_round*Lidar_data_bin_num];
 
-
-#define Method  2
-
 void setup() {
   //-------------Lidar---------------------
   //// connect RX2/TX2 to lidar's RX/TX
@@ -68,23 +64,13 @@ void setup() {
   bluetooth.begin(baud);  // bluetooth's 波特率
   //-------------SD_card------------------
   SD_module_init(CS);     // initialize the SD_module and create Folder 
-#if Method==1  
-  if(!SD.exists("Database/data1.txt"))
+  if(!SD.exists("data2.txt"))
   {
-    f = SD.open("Database/data1.txt",FILE_WRITE);
-    if(f){
-      f.close();
-    }
-  }
-#elif Method==2
-  if(!SD.exists("Database/data2.txt"))
-  {
-    f = SD.open("Database/data2.txt",FILE_WRITE);
+    f = SD.open("data2.txt",FILE_WRITE);
     if(f){
       f.close();
     }
   }  
-#endif
   //------------test lidar's data--------
   // Serial.begin(baud);
 
@@ -95,16 +81,6 @@ void setup() {
 }
 
 void loop() {
-    //-------------bluetooth----------------
-    //// use bluetooth to control the car
-    // if(bluetooth.available())
-    // {
-    //   receive_bt = bluetooth.read();
-    //   slide_control(receive_bt,V_car,LEFT_MOTO,RIGHT_MOTO,Sensi);
-    //   if(receive_bt==200)// when control_signal is "stop",then stop both car and lidar
-    //   {Serial2.write(0xA5);
-    //     Serial2.write(0x25);}
-    // }
     if((!Lidar_head_message)&&(Serial2.available()>=Lidar_head_num))
     {
       for(int i=0;i<Lidar_head_num;i++)
@@ -116,55 +92,14 @@ void loop() {
     //--------------------------------------------------------
     //--------------------------------------------------------
     //// write data for a hole circle(each angle has 5byte data)
-#if Method==1    
-    while(new_start != 1)
-    {
-      if(Lidar_head_message && Serial2.available()>=Lidar_data_bin_num)
-      {
-        for(int i=0;i<Lidar_data_bin_num;i++,Lidar_list_index++)
-        {
-          Lidar_5byte[i] = Serial2.read();
-          Lidar_list[Lidar_list_index] = Lidar_5byte[i];
-        }
-        if((Lidar_5byte[0] & 0x03) == 0x01)
-        {
-          f = SD.open("Database/data1.txt",FILE_WRITE);
-          for(int i=0;i<Lidar_list_index;i++)
-          {
-            ////----------write Lidar_list data to SD_card--------------
-            f.print(Lidar_list[i]);
-            f.print(",");
-          }
-          f.print("\n");
-          f.close();                    
-          new_start = 1;
-        }
-      }
-    }
-    // f = SD.open("Database/data1.txt",FILE_WRITE);
-    // for(int i=0;i<Lidar_list_index;i++)
-    // {
-    //   ////----------write Lidar_list data to SD_card--------------
-    //   f.print(Lidar_list[i]);
-    //   f.print(",");
-    // }
-    // f.print("\n");
-    // f.close();
-    Lidar_list_index = 0;
-    new_start = 0;
-    //--------------------------------------------------------
-    //--------------------------------------------------------
-#elif Method==2
     if(Lidar_head_message && Serial2.available()>=Lidar_data_bin_num)
     {
       for(int i=0;i<Lidar_data_bin_num;i++)
       {
         Lidar_5byte[i] = Serial2.read();
-        buf_index += sprintf(&BUFFER[buf_index],"%d",Lidar_5byte[i]);
       }
       if((Lidar_5byte[0] & 0x03)==0x01) {
-        // Serial.print(1);
-        BUFFER[buf_index++] = '\n';
+
       }
       if(buf_index >= bufsize-10){
         f = SD.open("Database/data2.txt",FILE_WRITE);
@@ -172,21 +107,5 @@ void loop() {
         f.close();
         buf_index = 0;
       }
-
-      // for(int i=0;i<Lidar_data_bin_num;i++)
-      // {
-      //     ////----------write Lidar_list data to SD_card--------------
-      //   f.print(Lidar_5byte[i]);
-      //   f.print(",");
-      // }
-      // if((Lidar_5byte[0] & 0x01) && (!(Lidar_5byte[0] &0x10)) && (Lidar_5byte[1]) & 0x01){
-      //   f.print("\n");
-      // }
-      // f.close();       
-    }
-#else
-
-#endif
-
   //--------------end of loop()-------------
 }

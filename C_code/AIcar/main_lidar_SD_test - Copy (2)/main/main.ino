@@ -22,7 +22,10 @@
 #define bufsize     1024       // SD_card's buf size
 #define Lidar_head_num      7     //A5 5A 05 00 00 40 81 
 #define Lidar_data_bin_num  5
-#define num_of_round        320   // the number of data after a round
+#define num_of_round        8   // the number of data after a round
+//serial test
+
+#define serial_open 0
 
 //-------------bluetooth----------------
 //// connect bluetooth to the board
@@ -30,20 +33,23 @@ SoftwareSerial bluetooth(0,1);  // bluetooth's pin RX,TX
 int receive_bt = 0;             // data received from bluetooth
 //-------------SD_card------------------
 ////attention ! File is not FILE
-File f;
+// File f;
 int buf_index = 0;
 unsigned char   BUFFER[bufsize];
+
 //-------------lidar_data---------------
+// unsigned char expected_header[7] = {0xA5, 0x5A, 0x05, 0x00, 0x00, 0x40, 0x81};
 bool Lidar_head_message;
 bool new_start;                 // a round is finished
 int  Lidar_list_index;
 unsigned char   Lidar_data;
 unsigned char   Lidar_init[Lidar_head_num];
 unsigned char   Lidar_5byte[Lidar_data_bin_num];
-unsigned char   Lidar_list[num_of_round*Lidar_data_bin_num];
-
-
-#define Method  2
+float   Lidar_list[num_of_round]; //float
+uint16_t  angle_raw;
+uint16_t  dist_raw;
+float     angle_real;
+float     dist_real;
 
 void setup() {
   //-------------Lidar---------------------
@@ -67,30 +73,17 @@ void setup() {
   //-------------bluetooth----------------
   bluetooth.begin(baud);  // bluetooth's 波特率
   //-------------SD_card------------------
-  SD_module_init(CS);     // initialize the SD_module and create Folder 
-#if Method==1  
-  if(!SD.exists("Database/data1.txt"))
-  {
-    f = SD.open("Database/data1.txt",FILE_WRITE);
-    if(f){
-      f.close();
-    }
-  }
-#elif Method==2
-  if(!SD.exists("Database/data2.txt"))
-  {
-    f = SD.open("Database/data2.txt",FILE_WRITE);
-    if(f){
-      f.close();
-    }
-  }  
-#endif
+  SD.begin(CS);     // initialize the SD_module and create Folder 
+  // if(!SD.exists("data2.txt"))
+  // {
+  //   f = SD.open("data2.txt",FILE_WRITE);
+  //   if(f){
+  //     f.close();
+  //   }
+  // }  
+  Lidar_head_message=0;
   //------------test lidar's data--------
   // Serial.begin(baud);
-
-  Lidar_head_message=0;
-  new_start = 0;
-  Lidar_list_index = 0;
   //-------------end of setup()-----------
 }
 
@@ -115,78 +108,33 @@ void loop() {
     }
     //--------------------------------------------------------
     //--------------------------------------------------------
-    //// write data for a hole circle(each angle has 5byte data)
-#if Method==1    
-    while(new_start != 1)
+
+    while(Lidar_list_index != num_of_round)
     {
       if(Lidar_head_message && Serial2.available()>=Lidar_data_bin_num)
       {
-        for(int i=0;i<Lidar_data_bin_num;i++,Lidar_list_index++)
+        for(int i=0;i<Lidar_data_bin_num;i++)
         {
           Lidar_5byte[i] = Serial2.read();
-          Lidar_list[Lidar_list_index] = Lidar_5byte[i];
         }
-        if((Lidar_5byte[0] & 0x03) == 0x01)
-        {
-          f = SD.open("Database/data1.txt",FILE_WRITE);
-          for(int i=0;i<Lidar_list_index;i++)
-          {
-            ////----------write Lidar_list data to SD_card--------------
-            f.print(Lidar_list[i]);
-            f.print(",");
-          }
-          f.print("\n");
-          f.close();                    
-          new_start = 1;
-        }
+        angle_raw = (((uint16_t)Lidar_5byte[2] << 8) | Lidar_5byte[1]) >> 1;
+        dist_raw = ((uint16_t)Lidar_5byte[4] << 8) | Lidar_5byte[3];
+        angle_real = angle_raw/64.0;
+        dist_real = dist_raw/4000.0;
+        Lidar_list[Lidar_list_index++] = angle_real;
       }
     }
-    // f = SD.open("Database/data1.txt",FILE_WRITE);
-    // for(int i=0;i<Lidar_list_index;i++)
-    // {
-    //   ////----------write Lidar_list data to SD_card--------------
-    //   f.print(Lidar_list[i]);
-    //   f.print(",");
-    // }
-    // f.print("\n");
-    // f.close();
+    // for(int i=0;i<Lidar_list_index;i++){
+    //   Serial.print(Lidar_list[i]);
+    //   Serial.print('\t');
+    // }    
+    File f = SD.open("data2.txt",FILE_WRITE);
+    for(int i=0;i<Lidar_list_index;i++){
+      f.print(Lidar_list[i]);
+      f.print("\t");
+    }
+    f.close(); 
     Lidar_list_index = 0;
-    new_start = 0;
-    //--------------------------------------------------------
-    //--------------------------------------------------------
-#elif Method==2
-    if(Lidar_head_message && Serial2.available()>=Lidar_data_bin_num)
-    {
-      for(int i=0;i<Lidar_data_bin_num;i++)
-      {
-        Lidar_5byte[i] = Serial2.read();
-        buf_index += sprintf(&BUFFER[buf_index],"%d",Lidar_5byte[i]);
-      }
-      if((Lidar_5byte[0] & 0x03)==0x01) {
-        // Serial.print(1);
-        BUFFER[buf_index++] = '\n';
-      }
-      if(buf_index >= bufsize-10){
-        f = SD.open("Database/data2.txt",FILE_WRITE);
-        f.write(BUFFER,buf_index);
-        f.close();
-        buf_index = 0;
-      }
-
-      // for(int i=0;i<Lidar_data_bin_num;i++)
-      // {
-      //     ////----------write Lidar_list data to SD_card--------------
-      //   f.print(Lidar_5byte[i]);
-      //   f.print(",");
-      // }
-      // if((Lidar_5byte[0] & 0x01) && (!(Lidar_5byte[0] &0x10)) && (Lidar_5byte[1]) & 0x01){
-      //   f.print("\n");
-      // }
-      // f.close();       
-    }
-#else
-
-#endif
-
+         
   //--------------end of loop()-------------
 }
