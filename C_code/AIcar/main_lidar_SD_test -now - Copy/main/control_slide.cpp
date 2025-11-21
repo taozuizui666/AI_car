@@ -1,5 +1,6 @@
+#include "core_pins.h"
 #include "control_slide.h"
-
+#define bias    7
 void stop_CS(int left_moto,int right_moto)
 {
     analogWrite(left_moto, 0);
@@ -8,7 +9,7 @@ void stop_CS(int left_moto,int right_moto)
 
 void ahead_CS(int v_car,int left_moto,int right_moto)
 {
-    analogWrite(left_moto, v_car);
+    analogWrite(left_moto, v_car + bias);
     analogWrite(right_moto, v_car);
 }
 
@@ -21,9 +22,11 @@ void slide_control(int receive_bt,int v_car,int left_moto,int right_moto,int sen
         case 201:
             ahead_CS(v_car,left_moto,right_moto);
             break;
+        case 255:
+            break; // start SD store
         default:
-            analogWrite(left_moto, v_car-(50-receive_bt)*sensi);
-            analogWrite(right_moto, v_car+(50-receive_bt)*sensi);
+            analogWrite(left_moto,bias + v_car-(10-receive_bt)*sensi);
+            analogWrite(right_moto, v_car+(10-receive_bt)*sensi);
             break;
     }
 }

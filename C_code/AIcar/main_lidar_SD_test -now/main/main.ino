@@ -13,21 +13,18 @@
 #define LEFT_MOTO   14
 #define RIGHT_MOTO  15
 // paras
-#define bluetooth_baud  9600
-#define baud        115200
-#define baud2       115200
+#define bluetooth_baud     9600
+#define serial_baud        115200
+#define lidar_baud         115200
 #define V_car       70       // velocity of the car
 #define Sensi       1         // sensitivity of control ; bigger than more sensitive
-#define bufsize     1024       // SD_card's buf size
 #define Lidar_head_num      7     //A5 5A 05 00 00 40 81 
 #define Lidar_data_bin_num  5
 
 #define time_of_round       160     ////-------------------about 147 ms a round------------------
-#define num_of_round        250   // the number of data after a round
+#define num_of_round        250   // the number of data after a round   250
 
 //-------------bluetooth----------------
-//// connect bluetooth to the board
-SoftwareSerial bluetooth(0,1);  // bluetooth's pin RX,TX
 int receive_bt = -1;             // data received from bluetooth
 #define SD_start_store    255
 bool SD_store  = 0;
@@ -53,41 +50,49 @@ long last_time = 0;
 int num_zero = 0;
 
 void setup() {  
+  pinMode(2, OUTPUT);
+  pinMode(3, OUTPUT);
   //-------------pin outputs---------------
   pinMode(Lidar_ctr, OUTPUT);
   pinMode(CS, OUTPUT);
-  pinMode(MOSI, OUTPUT);
-  pinMode(SCK, OUTPUT);
   pinMode(LEFT_MOTO,OUTPUT);
   pinMode(RIGHT_MOTO,OUTPUT); 
+  //------------test lidar's data--------
+  // Serial.begin(serial_baud);
+  //-------------SD_card------------------
+  SD.begin(CS);
+  f = SD.open("data3.txt",FILE_WRITE);
+  f.print(0);
+  f.print('\n');
+  f.flush();
   //// control the spin speed of lidar
   analogWrite(Lidar_ctr, 255); 
+  // connect to bluetooth
+  Serial1.begin(bluetooth_baud);
   //-------------Lidar---------------------
   //// connect RX2/TX2 to lidar's RX/TX
-  Serial2.begin(baud2);
+  Serial2.begin(lidar_baud);
   //// turn on the lidar to receive data
   //// attention! lidar can only receive data when it is spinning
   Serial2.write(0xA5);
   Serial2.write(0x40);    // Reset RPLidar
   delay(3000);
   Serial2.write(0xA5);
-  Serial2.write(0x20);    // command RPLidar to spin
-  //-------------bluetooth----------------
-  bluetooth.begin(bluetooth_baud);  // bluetooth's 波特率 
-  //------------test lidar's data--------
-  // Serial.begin(baud);
-  //-------------SD_card------------------
-  SD.begin(CS);
+  Serial2.write(0x20);    // command RPLidar to spin  
   //-------------end of setup()-----------
 }
 void loop() {
   //-------------bluetooth----------------
-  if(bluetooth.available())
+  if(Serial1.available())
   {
-    receive_bt = bluetooth.read();
-    if(receive_bt == SD_start_store){
+    receive_bt = Serial1.read();
+    if(receive_bt == 255){
       SD_store = 1;
-    }
+      digitalWrite(2, HIGH);
+    }else if(receive_bt == 200){
+      SD_store = 0;
+      digitalWrite(2, LOW);      
+    }    
     slide_control(receive_bt,V_car,LEFT_MOTO,RIGHT_MOTO,Sensi);
   }
   //--------------------------------------------------------------
@@ -105,6 +110,7 @@ void loop() {
   last_time = millis();
   while(Lidar_head_message)
   {
+    digitalWrite(3, HIGH);
     if(Serial2.available()>=Lidar_data_bin_num)
     {
       for(int i=0;i<Lidar_data_bin_num;i++)
@@ -115,44 +121,28 @@ void loop() {
       dist_raw = (((uint16_t)Lidar_5byte[4] << 8) | Lidar_5byte[3]);
       angle_real = angle_raw/64.0;
       dist_real = dist_raw/4.0;
-      // Serial.print(angle_real);
-      // Serial.print('\t');
       if(dist_real<3000){
-        int index = map(angle_real, 0, 360, 0, num_of_round);
-        // Serial.print(index);
-        // Serial.print('\t');
-        if(dist_real==0){
+        int index = map(angle_real, 0, 361, 0, num_of_round);
+        if(dist_real==0 && index > 0){
           Lidar_list_dis[index] = Lidar_list_dis[index-1];
         }
         Lidar_list_dis[index] = dist_real;
       }
       if(millis()-last_time>time_of_round){
-        if(SD_store &&(receive_bt != 200)){
-          f = SD.open(FILE_NAME,FILE_WRITE);
-          for(int i=0;i<num_of_round;i++){
-            // f.print('\t');
-            // f.print(i);
-            // f.print('\t');
-            f.print(Lidar_list_dis[i]);
-            f.print(',');
-            // Serial.print(Lidar_list_dis[i]);
-            // Serial.print('\t');
-            if(Lidar_list_dis[i]==0.00){num_zero++;}
+        if(SD_store==1){
+          if(f){
+            for(int i=0;i<num_of_round;i++){
+              f.print(Lidar_list_dis[i]);
+              f.print(',');
+            }
           }
-          // Serial.print('\n');
-          // f.print('\t');
-          // f.print(num_zero);
-          f.print(',');
-          f.print(receive_bt);
           f.print('\n');
-          f.close();
-          num_zero = 0;
+          f.flush();
         }
-
         break;
-      }
+      }      
     }
-  }
+  }  
   //--------------end of loop()-------------
 }
 int map(float x, int in_min, int in_max, int out_min, int out_max)
