@@ -27,7 +27,7 @@ teensy_project\Androidapp\App
 
 record : after 3 months, the car can use store lidar's data into SD now.
 
-it took me less than 1 month to complete 90% of Part1, but it took me more than 2 months to complete the last 10%.
+it took me less than 1 month to complete 90% of Part1, but it took me more than 2 months to complete the last 10%. I can't use the [rplidar library](https://github.com/robopeak/rplidar_arduino) on teensy board, so I just read the manual and use my own code to analyse data from the rplidar.
 
 It is very strange that when I use computer to receive data from Lidar, it is all ok, when I store data into SD card, it is all ok too no matter how many data I stored one time( you can see the codes in the C_code folder), but when I combined them together, there are strange errors all the time,  like: reset the chip after 5-10s, file remains empty, can't control the car after 5-10s ...
 
@@ -57,3 +57,10 @@ another important method I use is to clean the Lidar_data buffer after storing d
 
 ```
 This make me learn a lesson: we shouldn't just go after the speed, we should also take stability into consideration. Dr. Gerard told me sometimes it's very useful to make the fast process wait sometime for the slow process.
+
+##
+
+I tried Ardunio UNO these days, and it surprised me that it can use [rplidar library](https://github.com/robopeak/rplidar_arduino)! although RAM is very small(2KB), with the library, data stored in SD card is much more smooth than teensy4.0. 
+
+I modified the library and made it work on teensy4.0 now. in the library, there are some codes can resolve the noise problem, which is very important in this high speed module. I think that is why my data stored in SD card may stuck after a few seconds. now I solved this, with large RAM on teensy4.0, data is even more smooth than on Ardunio UNO.
+ 
