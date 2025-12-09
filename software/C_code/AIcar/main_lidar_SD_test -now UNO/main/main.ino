@@ -5,24 +5,22 @@
 #include "control_slide.h"
 // ports
 
-#define Lidar_ctr     9   //control the spin speed of lidar
+#define Lidar_ctr     8   //control the spin speed of lidar 
 #define CS            4  //chip select(from SD_card module)
 
 #define SCK         13  //serial clk(from SD_card module)
-
-  #define LEFT_MOTO   14
-  #define RIGHT_MOTO  15
+#define LEFT_MOTO   9
+#define RIGHT_MOTO  6
 
 // paras
 #define bluetooth_baud      9600
 #define serial_baud         115200
 #define lidar_baud          115200
-#define V_car               70       // velocity of the car
+#define V_car               100       // velocity of the car
 #define Sensi               1         // sensitivity of control ; bigger than more sensitive
 
-#define LIDAR_RESOLUTION    200
-#define time_of_round       160     ////-------------------about 147 ms a round------------------
-// #define num_of_round        250     // the number of data after a round   250
+#define LIDAR_RESOLUTION    150
+#define time_of_round       150     ////-------------------about 147 ms a round------------------
 // #define NUM_of_yield        50      // how many rounds to yield
 // #define NUM_to_store        50      // how many rounds to store into SD
 
@@ -36,7 +34,7 @@ bool SD_store  = 0;
 //-------------SD_card------------------
 ////attention ! File is not FILE
 File f;
-#define FILE_NAME   "sq.txt"
+#define FILE_NAME   "data.txt"
 //-------------Lidar--------------------
 RPLidar lidar;
 uint16_t distances[LIDAR_RESOLUTION];
@@ -56,9 +54,11 @@ void setup() {
   pinMode(Lidar_ctr, OUTPUT);
   pinMode(CS, OUTPUT);
   pinMode(7, OUTPUT);
+  pinMode(LEFT_MOTO, OUTPUT);
+  pinMode(RIGHT_MOTO, OUTPUT);
 
   SD.begin(CS);
-  bluetooth.begin(9600);
+  bluetooth.begin(bluetooth_baud);
 
   rplidar_response_device_info_t info;
   if (IS_OK(lidar.getDeviceInfo(info, 100))) {
@@ -72,30 +72,33 @@ void setup() {
 
 void loop() {
   // //-------------bluetooth 控制与文件管理----------------
-  if(bluetooth.available()) {
-    receive_bt = bluetooth.read();    
-    if(receive_bt == 255) {
-      if (!is_recording) {
-        f = SD.open(FILE_NAME, FILE_WRITE);
-        if (f) {
-          is_recording = true;
-        } 
-      }
-      digitalWrite(7, HIGH);
-    } 
-    else if(receive_bt == 200) {
-      if (is_recording) {
-        is_recording = false;
-        f.close();
-      }
-      digitalWrite(7, LOW);
-    }    
-    slide_control(receive_bt, V_car, LEFT_MOTO, RIGHT_MOTO, Sensi);
-  }
+
 
   // //---------------store into SD----------------------
 
   while(millis() - last_time <= time_of_round){
+
+    if(bluetooth.available()) {
+      receive_bt = bluetooth.read();    
+      if(receive_bt == 255) {
+        if (!is_recording) {
+          f = SD.open(FILE_NAME, FILE_WRITE);
+          if (f) {
+            is_recording = true;
+          } 
+        }
+        digitalWrite(7, HIGH);
+      } 
+      else if(receive_bt == 200) {
+        if (is_recording) {
+          is_recording = false;
+          f.close();
+        }
+        digitalWrite(7, LOW);
+      }    
+      slide_control(receive_bt, V_car, LEFT_MOTO, RIGHT_MOTO, Sensi);
+    }
+
     lidar.waitPoint();
     uint16_t dist = (uint16_t)lidar.getCurrentPoint().distance;
     uint16_t angl = (uint16_t)lidar.getCurrentPoint().angle;
@@ -106,7 +109,6 @@ void loop() {
     if (dist<10000) {
       distances[index] = (uint16_t)dist;
     }else{
-      // distances[index] = 0;
     }
   }
 

@@ -1,5 +1,5 @@
 #include "control_slide.h"
-#define bias    7
+#define bias    31
 void stop_CS(int left_moto,int right_moto)
 {
     analogWrite(left_moto, 0);
@@ -8,8 +8,8 @@ void stop_CS(int left_moto,int right_moto)
 
 void ahead_CS(int v_car,int left_moto,int right_moto)
 {
-    analogWrite(left_moto, v_car + bias);
-    analogWrite(right_moto, v_car);
+    analogWrite(left_moto, v_car );
+    analogWrite(right_moto, v_car+ bias);
 }
 
 void slide_control(int receive_bt,int v_car,int left_moto,int right_moto,int sensi)
@@ -24,8 +24,8 @@ void slide_control(int receive_bt,int v_car,int left_moto,int right_moto,int sen
         case 255:
             break; // start SD store
         default:
-            analogWrite(left_moto,bias + v_car-(10-receive_bt)*sensi);
-            analogWrite(right_moto, v_car+(10-receive_bt)*sensi);
+            analogWrite(left_moto, (int)(v_car-(10-receive_bt)*sensi*3));
+            analogWrite(right_moto, bias + v_car+(10-receive_bt)*sensi);
             break;
     }
 }
