@@ -57,7 +57,17 @@ void setup() {
   pinMode(LEFT_MOTO, OUTPUT);
   pinMode(RIGHT_MOTO, OUTPUT);
 
-  SD.begin(CS);
+  while(!SD.begin(CS)){
+    digitalWrite(7, HIGH);
+    delay(500);
+    digitalWrite(7, LOW);
+    // delay(1000);
+  }
+  
+  f = SD.open(FILE_NAME, FILE_WRITE);
+  f.close();
+
+
   bluetooth.begin(bluetooth_baud);
 
   rplidar_response_device_info_t info;

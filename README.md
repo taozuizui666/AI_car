@@ -8,7 +8,9 @@ author ： TAO RAN
 
 ### **note**：
 
-when compilation wrong in ardunio, try remove C\\...\\AppData\\Local\\arduino\\sketches files, this may make recompile successful.
+1. when compilation wrong in ardunio, try remove C\\...\\AppData\\Local\\arduino\\sketches files, this may make recompile successful.
+2. if you cannot store file into SD card or the file you stored is always damaged, scan your SD card's file first, if there is any damaged file like with data 2049 or the size is extremely large like 2438,5674,4389KB, then delete this file. Any damaged file inside your SD card will very likely to lead to the above situation
+
 
 the whole program is divided into 3 main parts : 
 * **part1**: build the car and run program (bluetooth control, Lidar scan and SD store )
