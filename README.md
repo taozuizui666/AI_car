@@ -77,7 +77,9 @@ This make me learn a lesson: we shouldn't just go after the speed, we should als
 I tried Ardunio UNO these days, and it surprised me that it can use [rplidar library](https://github.com/robopeak/rplidar_arduino)! although RAM is very small(2KB), with the library, data stored in SD card is much more smooth than teensy4.0. 
 
 By using the library, it works well, to test whether this method can work, I started with trainning the car go anticlockwise, to verify the data good or not, I wrote a python code to translate the data at each angle in each round of lidar to the scatter diagrams in the polar map, you can see clearly the surroundings of the car.
+
 ![scatter diagram](images_gifs/first_anticlockwise.gif)
+
 But there are also some problems:
 * some edges are empty, some points are missing(means 0s)
 ![0s](images_gifs/some0s.png)
@@ -88,6 +90,7 @@ But there are also some problems:
 I will try to solve this problem later.
 
 Doc. Gerard told me I don't have to collect data that are behind the car, it goes forward and judges the direction only based on forward informations. so I modifed the code and later on, all diagrams will have points only at angles [0,90]&[270,360]
+
 ![forward](images_gifs/forward_anticlockwise.gif)
 
 I collected data of 5492KB, and merge these files into one, after clean the wrong lines(including wrong numbers and lines that are not full), I got data of 5116KB 
@@ -96,7 +99,9 @@ I collected data of 5492KB, and merge these files into one, after clean the wron
 Then I move to the next step --> train a ML model
 
 I use RandomForestClassifier from sklearn for trainning, and select 12 best index from 100 index, we can see these index marked red below:
+
 ![marked red](images_gifs/mark_red.gif)
+
  and follow the conventional routine, considering the ROM is only 2MB, I set max_depth=3 and n_estimators=50(if I choose max_depth=4, the ROM will be overwhelmed), 
 ```
 k = 12
