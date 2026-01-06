@@ -1,6 +1,6 @@
 #include "core_pins.h"
 #include "control_slide.h"
-#define bias    7
+#define bias    10
 void stop_CS(int left_moto,int right_moto)
 {
     analogWrite(left_moto, 0);

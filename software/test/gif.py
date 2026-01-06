@@ -7,11 +7,11 @@ from pathlib import Path
 import imageio 
 
 # ---------------Configure area --------------
-FILENAME = "DATA.TXT" #"SQ.TXT" #"square.txt"
-NUM_POINTS = 150
+FILENAME = "data.txt"#DATA.TXT" #"SQ.TXT" #"square.txt"
+NUM_POINTS = 200
 pause_seconds = 0.1             # interval time(s)
 r_min = 0
-r_max = 500
+r_max = 2000
 POINT_SIZE = 5                  # data point size
 
 save_frames = True            # <<-- 确保设置为 True

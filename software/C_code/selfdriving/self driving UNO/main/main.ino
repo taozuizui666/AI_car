@@ -19,14 +19,14 @@
 #define degree_270          3*LIDAR_RESOLUTION/4
 #define LIDAR_RESOLUTION    200
 #define time_of_round       150     ////-------------------about 147 ms a round------------------
-#define k_best              10
+#define k_best              8
 
 //-------------Lidar--------------------
 RPLidar lidar;
 uint16_t distances[LIDAR_RESOLUTION];
 Eloquent::ML::Port::RandomForest clf;
 
-int lidarDataSelection[k_best] = {166, 168, 169, 170, 171, 172, 173, 174, 175, 176};
+int lidarDataSelection[k_best] = {22, 23, 24, 25, 26, 27, 28, 29};
 
 long last_time = 0;
 uint8_t ML_contr=0;

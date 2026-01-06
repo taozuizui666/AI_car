@@ -15,7 +15,7 @@ r_max = 2500
 POINT_SIZE = 5
 
 # ===== Highlight configuration =====
-HIGHLIGHT_INDICES = [  1,  23,  24, 151, 176, 177, 179, 180, 181, 182, 184, 185, 188, 192, 194, 195, 196, 197, 198, 199]
+HIGHLIGHT_INDICES = [22, 23, 24, 25, 26, 27, 28, 29]
 HIGHLIGHT_COLOR = "red"
 HIGHLIGHT_SIZE = 10
 # ==================================
