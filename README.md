@@ -9,13 +9,22 @@ author ： TAO RAN
 ### **note**：
 
 1. when compilation wrong in ardunio, try remove C\\...\\AppData\\Local\\arduino\\sketches files, this may make recompile successful.
+![sketches](.\images_gifs\sketches.png)
 2. if you cannot store file into SD card or the file you stored is always damaged, scan your SD card's file first, if there is any damaged file like with data 2049 or the size is extremely large like 2438,5674,4389KB, then delete this file. Any damaged file inside your SD card will very likely to lead to the above situation
+![like this](.\images_gifs\SD_wrong.png)
 
+##
+version v1.0.0
 
 the whole program is divided into 3 main parts : 
 * **part1**: build the car and run program (bluetooth control, Lidar scan and SD store )
 * **part2**: train the car through App on the phone
 * **part3**: use ML methods to train a model to enable the car self-control
+
+##
+version v2.0.0
+following improvements:
+* **part1**: using digital tween for trainning(python/ gazebo/ stage),because it's more efficient to use computer to virtually train the car, let alone some complex situations like overtake another car, it's very hard to train this manually, and the trainning data we need is very large.
 
 ## 
 
