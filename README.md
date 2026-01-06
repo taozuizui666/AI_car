@@ -36,7 +36,10 @@ teensy_project\Androidapp\App
 
 ##
 
-record : after 3 months, the car can use store lidar's data into SD now.
+record : after 3 months(2025.08.04-2025.11.30), the car can use store lidar's data into SD now.
+
+I'll briefly introduce the Part1's work first.
+
 
 it took me less than 1 month to complete 90% of Part1, but it took me more than 2 months to complete the last 10%. I can't use the [rplidar library](https://github.com/robopeak/rplidar_arduino) on teensy board, so I just read the manual and use my own code to analyse data from the rplidar.
 
@@ -48,23 +51,23 @@ I should use DMA to directly store data into SD, this can make CPU easy to work 
 
 now I am using "yield()" function to handle this, "yield()" can stop the current process, check USB message and reset the watch_dog timer. it is said in these way can handle the chip reset problem and it dose, but I still don't know whether it is the true reason, later I will do other experiences to research this.
 ```
-        for(int i=0; i<num_of_round; i++){
-          f.print(Lidar_list_dis[i]);
-          f.print(',');
-          // every storing 50 data, reset the watch_dog timer to tell the system is all OK
-          if (i % 50 == 0) yield(); 
-        }
+for(int i=0; i<num_of_round; i++){
+  f.print(Lidar_list_dis[i]);
+  f.print(',');
+  // every storing 50 data, reset the watch_dog timer to tell the system is all OK
+  if (i % 50 == 0) yield(); 
+}
 
 ```
 
 another important method I use is to clean the Lidar_data buffer after storing data to SD, to prevent the buffer collapse after been blocked for so long .
 
 ```
-      //-----codes that store data to SD-----
+//-----codes that store data to SD-----
 
-      while(Serial2.available()) {
-        Serial2.read(); 
-      }
+while(Serial2.available()) {
+  Serial2.read(); 
+}
 
 ```
 This make me learn a lesson: we shouldn't just go after the speed, we should also take stability into consideration. Dr. Gerard told me sometimes it's very useful to make the fast process wait sometime for the slow process.
@@ -72,6 +75,48 @@ This make me learn a lesson: we shouldn't just go after the speed, we should als
 ##
 
 I tried Ardunio UNO these days, and it surprised me that it can use [rplidar library](https://github.com/robopeak/rplidar_arduino)! although RAM is very small(2KB), with the library, data stored in SD card is much more smooth than teensy4.0. 
+
+By using the library, it works well, to test whether this method can work, I started with trainning the car go anticlockwise, to verify the data good or not, I wrote a python code to translate the data at each angle in each round of lidar to the scatter diagrams in the polar map, you can see clearly the surroundings of the car.
+![scatter diagram](images_gifs/first_anticlockwise.gif)
+But there are also some problems:
+* some edges are empty, some points are missing(means 0s)
+![0s](images_gifs/some0s.png)
+* the diagram blinks sometimes(in fact often), it means wrong numbers like '?' or something else or the number of one line is not the same as we set
+![wrongnums](images_gifs/wrongnums.png)
+![wrongnums](images_gifs/wrongnums2.png)
+
+I will try to solve this problem later.
+
+Doc. Gerard told me I don't have to collect data that are behind the car, it goes forward and judges the direction only based on forward informations. so I modifed the code and later on, all diagrams will have points only at angles [0,90]&[270,360]
+![forward](images_gifs/forward_anticlockwise.gif)
+
+I collected data of 5492KB, and merge these files into one, after clean the wrong lines(including wrong numbers and lines that are not full), I got data of 5116KB 
+![datasize](images_gifs/datasize.png)
+##
+Then I move to the next step --> train a ML model
+
+I use RandomForestClassifier from sklearn for trainning, and select 12 best index from 100 index, we can see these index marked red below:
+![marked red](images_gifs/mark_red.gif)
+ and follow the conventional routine, considering the ROM is only 2MB, I set max_depth=3 and n_estimators=50(if I choose max_depth=4, the ROM will be overwhelmed), 
+```
+k = 12
+k_best = SelectKBest(score_func=f_classif, k=k)
+k_best.fit(X_train, y_train)
+
+clf = RandomForestClassifier(
+    n_estimators=50,
+    max_depth=3, 
+    random_state=42)
+```
+then I calculate the accuracy, superisingly, it's 0.1954!!!
+
+I checked the [YouTuber's work](https://github.com/robopeak/rplidar_arduino), he collected data at most 17780KB, but it's many different ways like '8',clockwise, anticlockwise and so on, I don't think my dataset has such a low accuracy. When I saw he only got 5 directions:
+
+ (forward, a bit left, very left, a bit right, very right)
+
+ I suddenly understand why. I have 21 directions!(from 0 to 20,10 stands for go forward) it means that 10 is nearly no difference with (11,12) and (9,8), and some differece with (13,14) and (7,6). so if the ML model predicts the direction is 10, and the real direction is 9 or 12 in the test_set, it shouldn't be wrong! when I include this ±2 to be correct, the accuracy increased crazily to 80%! I know there are some problem with this method, but it shows the model is not that bad, and let's look at the result. It can automaticly drive itself anticlockwise!
+
+##
 
 I modified the library and made it work on teensy4.0 now. in the library, there are some codes can resolve the noise problem, which is very important in this high speed module. I think that is why my data stored in SD card may stuck after a few seconds. now I solved this, with large RAM on teensy4.0, data is even more smooth than on Ardunio UNO.
  
