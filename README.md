@@ -10,7 +10,7 @@ author ： TAO RAN
 
 1. when compilation wrong in ardunio, try remove C\\...\\AppData\\Local\\arduino\\sketches files, this may make recompile successful.
 ![sketches](images_gifs/sketches.png)
-2. if you cannot store file into SD card or the file you stored is always damaged, scan your SD card's file first, if there is any damaged file like with data 2049 or the size is extremely large like 2438,5674,4389KB, then delete this file. Any damaged file inside your SD card will very likely to lead to the above situation
+2. if you cannot store file into SD card or the file you stored is always damaged, scan your SD card's file first, if there is any damaged file like with data 2049 or the size is extremely large like 2097153KB, then delete this file. Any damaged file inside your SD card will very likely to lead to the above situation
 ![like this](images_gifs/SD_wrong.png)
 
 ##
@@ -39,6 +39,39 @@ teensy_project\Androidapp\App
 record : after 3 months(2025.08.04-2025.11.30), the car can use store lidar's data into SD now.
 
 I'll briefly introduce the Part1's work first.
+
+I designed an APP that can control the car by slider through bluetooth(which is a very common way):
+![app](images_gifs/app_interface.jpg)
+
+the slider has 21 steps, from 0 to 20. In my configuration, 10 stands for going forward(means slider is in the middle of the line, like now), and 0 means left turn limit, and 21 means right turn limit. You can see the settings of this APP below:
+![app_setting](images_gifs/app_layout.png)
+The phone will send the postion of slider to the car's receiver through bluetooth(it's obvious in the designer diagram below). Addtionally, there are 4 another unique numbers:[200,201,254,255]   stands for 'stop','forward','delete_file','SD_store' respectively. You can see my Designer diagram below:
+
+![unique_num](images_gifs/app_layout2.png)
+
+When the car receive the data, I wrote a function to handle it. You can ignore the bias now, it's for adjusting left and right motos.
+
+```
+
+void slide_control(int receive_bt,int v_car,int left_moto,int right_moto,int sensi)
+{
+    switch(receive_bt){
+        case 200:
+            stop_CS(left_moto,right_moto);
+            break;
+        case 201:
+            ahead_CS(v_car,left_moto,right_moto);
+            break;
+        case 255:
+            break; // start SD store
+        default:
+            analogWrite(left_moto,bias + v_car-(10-receive_bt)*sensi);
+            analogWrite(right_moto, v_car+(10-receive_bt)*sensi);
+            break;
+    }
+}
+
+```
 
 
 it took me less than 1 month to complete 90% of Part1, but it took me more than 2 months to complete the last 10%. I can't use the [rplidar library](https://github.com/robopeak/rplidar_arduino) on teensy board, so I just read the manual and use my own code to analyse data from the rplidar.
