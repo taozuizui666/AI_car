@@ -157,4 +157,7 @@ I checked the [YouTuber's work](https://github.com/robopeak/rplidar_arduino), he
 ##
 
 I modified the library and made it work on teensy4.0 now. in the library, there are some codes can resolve the noise problem, which is very important in this high speed module. I think that is why my data stored in SD card may stuck after a few seconds. now I solved this, with large RAM on teensy4.0, data is even more smooth than on Ardunio UNO.
+
+##
+I'm going to use Raspberry Pi 4.0 to drive the Rplidar later, because the official's SDK supports ROS, and it's easy to use Gazibo for digital tween in ROS. So later the version would be v2.0.0. 
  
